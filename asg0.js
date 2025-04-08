@@ -1,61 +1,53 @@
-// asg0.js
 function main () {
-  // Canvas + 2‑D context
   const canvas = document.getElementById('example');
-  if (!canvas) { console.error('Canvas not found'); return; }
+  if (!canvas) { 
+    console.error('Canvas not found');
+    return; 
+  }
   const ctx = canvas.getContext('2d');
 
-  // Store for easy access in the handler
+  // Store for easy access in event handlers.
   window._asg0 = { canvas, ctx };
 
-  // Wire the button
-  document.getElementById('drawBtn')
-          .addEventListener('click', handleDrawEvent);
+  // Wire the buttons.
+  document.getElementById('drawBtn').addEventListener('click', handleDrawEvent);
+  document.getElementById('opDrawBtn').addEventListener('click', handleDrawOperationEvent);
 
-  // Initial draw
+  // Initial draw.
   handleDrawEvent();
 }
 
-/**
- * Clears canvas, reads both vectors, draws v₁ (red) and v₂ (blue)
- */
-function handleDrawEvent () {
-  const { canvas, ctx } = window._asg0;
 
-  // Black background
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+function getVector1() {
+  const x = parseFloat(document.getElementById('xVal').value);
+  const y = parseFloat(document.getElementById('yVal').value);
+  return new Vector3([x, y, 0]);
+}
 
-  // ---- v1 (red) ----
-  const x1 = parseFloat(document.getElementById('xVal').value);
-  const y1 = parseFloat(document.getElementById('yVal').value);
-  const v1 = new Vector3([x1, y1, 0]);
-  drawVector(v1, 'red', ctx);
 
-  // ---- v2 (blue) ----
-  const x2 = parseFloat(document.getElementById('xVal2').value);
-  const y2 = parseFloat(document.getElementById('yVal2').value);
-  const v2 = new Vector3([x2, y2, 0]);
-  drawVector(v2, 'blue', ctx);
+function getVector2() {
+  const x = parseFloat(document.getElementById('xVal2').value);
+  const y = parseFloat(document.getElementById('yVal2').value);
+  return new Vector3([x, y, 0]);
 }
 
 /**
- * Draw a vector that starts at the canvas centre.
- * @param {Vector3} v   vector (z = 0)
+ * Draws a vector starting at the canvas center.
+ * @param {Vector3} v   vector (assumed z = 0)
  * @param {string}  color stroke/fill colour
- * @param {CanvasRenderingContext2D} ctx 2‑D context
+ * @param {CanvasRenderingContext2D} ctx 2D drawing context
  */
-function drawVector (v, color, ctx) {
-  const scale = 20;                    // pixels per unit
-  const cx = ctx.canvas.width  / 2;    // canvas centre
-  const cy = ctx.canvas.height / 2;
+function drawVector(v, color, ctx) {
+  const scale = 20;               
+  const cx = ctx.canvas.width  / 2; 
+  const cy = ctx.canvas.height / 2; 
 
-  // End‑point (flip y)
+  // Compute the end point (flip y coordinate)
   const xEnd = cx + v.elements[0] * scale;
   const yEnd = cy - v.elements[1] * scale;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth   = 3;
+  ctx.lineWidth = 3;
 
   ctx.beginPath();
   ctx.moveTo(cx, cy);
@@ -63,62 +55,115 @@ function drawVector (v, color, ctx) {
   ctx.stroke();
 }
 
-function clearCanvas() {
-  const canvas = document.getElementById('example');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-// register the new draw‑operation handler once DOM is ready
-window.addEventListener('load', () => {
-  document.getElementById('opDrawBtn').addEventListener('click', handleDrawOperationEvent);
-});
-
-function handleDrawOperationEvent() {
+function handleDrawEvent () {
   const { canvas, ctx } = window._asg0;
-  
-  // 1. clear
+
+  // Fill the background in black.
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 2. read v1
-  const v1 = new Vector3([parseFloat(document.getElementById('xVal').value), 
-                         parseFloat(document.getElementById('yVal').value), 0]);
+  const v1 = getVector1();
+  const v2 = getVector2();
   drawVector(v1, 'red', ctx);
-
-  // 3. read v2
-  const v2 = new Vector3([parseFloat(document.getElementById('xVal2').value),
-                         parseFloat(document.getElementById('yVal2').value), 0]);
   drawVector(v2, 'blue', ctx);
+}
 
-  // 4. determine operation
-  const op = document.getElementById('opSelect').value;
-  const s  = parseFloat(document.getElementById('scalarVal').value);
+/**
+ * Computes the angle (in degrees) between two vectors.
+ * @param {Vector3} v1 
+ * @param {Vector3} v2 
+ * @returns {number} Angle in degrees.
+ */
+function angleBetween(v1, v2) {
+  const dot = Vector3.dot(v1, v2);
+  const magProduct = v1.magnitude() * v2.magnitude();
+  if (magProduct === 0) return 0;  // avoid division by zero
+  return 180 / Math.PI * Math.acos(dot / magProduct);
+}
 
-  switch (op) {
-    case 'add': {
-      const v3 = new Vector3(v1).add(v2);
-      drawVector(v3, 'green', ctx);
+/**
+ * Computes the area of the triangle formed by vectors v1 and v2.
+ * @param {Vector3} v1 
+ * @param {Vector3} v2 
+ * @returns {number} Area of the triangle.
+ */
+function areaTriangle(v1, v2) {
+  const cross = Vector3.cross(v1, v2);
+  return cross.magnitude() / 2;
+}
+
+
+function handleDrawOperationEvent() {
+  const { canvas, ctx } = window._asg0;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const v1 = getVector1();
+  const v2 = getVector2();
+
+  drawVector(v1, "red", ctx);
+  drawVector(v2, "blue", ctx);
+
+  const op = document.getElementById("opSelect").value;
+  const scalar = parseFloat(document.getElementById("scalarVal").value);
+
+  switch(op) {
+    case "add": {
+      const result = v1.add(v2);
+      drawVector(result, "green", ctx);
       break;
     }
-    case 'sub': {
-      const v3 = new Vector3(v1).sub(v2);
-      drawVector(v3, 'green', ctx);
+    case "sub": {
+      const result = v1.sub(v2);
+      drawVector(result, "green", ctx);
       break;
     }
-    case 'mul': {
-      const v3 = new Vector3(v1).mul(s);
-      const v4 = new Vector3(v2).mul(s);
-      drawVector(v3, 'green', ctx);
-      drawVector(v4, 'green', ctx);
+    case "mul": {
+      const v1Scaled = v1.mul(scalar);
+      const v2Scaled = v2.mul(scalar);
+      drawVector(v1Scaled, "green", ctx);
+      drawVector(v2Scaled, "green", ctx);
       break;
     }
-    case 'div': {
-      const v3 = new Vector3(v1).div(s);
-      const v4 = new Vector3(v2).div(s);
-      drawVector(v3, 'green', ctx);
-      drawVector(v4, 'green', ctx);
+    case "div": {
+      if (scalar === 0) {
+        alert("Cannot divide by zero!");
+      } else {
+        const v1Scaled = v1.div(scalar);
+        const v2Scaled = v2.div(scalar);
+        drawVector(v1Scaled, "green", ctx);
+        drawVector(v2Scaled, "green", ctx);
+      }
       break;
     }
+    case "mag": {
+      console.log("Magnitude of v₁: " + v1.magnitude());
+      console.log("Magnitude of v₂: " + v2.magnitude());
+      break;
+    }
+    case "norm": {
+      const normalizedV1 = v1.normalize();
+      const normalizedV2 = v2.normalize();
+      drawVector(normalizedV1, "green", ctx);
+      drawVector(normalizedV2, "green", ctx);
+      break;
+    }
+    case "angle": {
+      const angle = angleBetween(v1, v2);
+      console.log("Angle between v₁ and v₂: " + angle.toFixed(2) + "°");
+      break;
+    }
+    case "area": {
+      const area = areaTriangle(v1, v2);
+      console.log("Area of triangle formed by v₁ and v₂: " + area);
+      break;
+    }
+    default:
+      console.error("Operation not supported: " + op);
   }
 }
+
+// Register the initial draw event when the window loads.
+window.addEventListener('load', main);
